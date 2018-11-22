@@ -6,8 +6,7 @@ import ast
 
 def getTracks(tracks):
     COLUMNS = [('track', 'tags'), ('album', 'tags'), ('artist', 'tags'),
-               ('track', 'genres'), ('track', 'genres_all'),
-               ('track', 'genres_top')]
+               ('track', 'genres'), ('track', 'genres_all')]
     for column in COLUMNS:
         tracks[column] = tracks[column].map(ast.literal_eval)
 
@@ -22,15 +21,15 @@ def getTracks(tracks):
     tracks['set', 'subset'] = tracks['set', 'subset'].astype(
         'category', categories=SUBSETS, ordered=True)
 
-    COLUMNS = [('track', 'license'), ('artist', 'bio'),
-               ('album', 'type'), ('album', 'information')]
+    COLUMNS = [('track', 'genre_top'), ('track', 'license'),
+               ('album', 'type'), ('album', 'information'),
+               ('artist', 'bio')]
     for column in COLUMNS:
         tracks[column] = tracks[column].astype('category')
 
-
     return tracks
 
-# tracks = getTracks(pd.read_csv(config.tracks_file, index_col=0, header=[0, 1]))
+tracks = getTracks(pd.read_csv(config.tracks_file, index_col=0, header=[0, 1]))
 genres = pd.read_csv(config.genres_file, index_col=0)
 features = pd.read_csv(config.features_file, index_col=0, header=[0,1,2])
 echonest = pd.read_csv(config.echonest_file, index_col=0, header=[0,1,2])
@@ -38,9 +37,9 @@ echonest = pd.read_csv(config.echonest_file, index_col=0, header=[0,1,2])
 # np.testing.assert_array_equal(features.index, tracks.index)
 # assert echonest.index.isin(tracks.index).all()
 
-print("Tracks:, Genres: {}, Features: {}, Echonest:{} "
+print("Tracks: {}, Genres: {}, Features: {}, Echonest:{} "
       .format(
-      # tracks.shape,
+      tracks.shape,
       genres.shape,
       features.shape,
       echonest.shape))
