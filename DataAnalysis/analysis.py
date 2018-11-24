@@ -29,11 +29,11 @@ def getTracks(tracks):
 
     return tracks
 
-tracks = getTracks(pd.read_csv(config.tracks_file, index_col=0, header=[0, 1]))
+tracks = getTracks(pd.read_csv(config.tracks_file, nrows=10,index_col=0, header=[0, 1]))
 genres = pd.read_csv(config.genres_file, index_col=0)
 features = pd.read_csv(config.features_file, index_col=0, header=[0,1,2])
 echonest = pd.read_csv(config.echonest_file, index_col=0, header=[0,1,2])
-
+print("Tracks: {}".format( tracks))
 
 print("Tracks: {}, Genres: {}, Features: {}, Echonest:{} "
       .format(

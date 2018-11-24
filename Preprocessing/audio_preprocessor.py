@@ -1,8 +1,8 @@
+import os
+from os import listdir
 import librosa
 import numpy as np
-import librosa.display as dp
-import matplotlib.pyplot as plt
-
+import time
 def compute_melgram(audio_path):
     ''' Compute a mel-spectrogram and returns it in a shape of (1,1,96,1366), where
     96 == #mel-bins and 1366 == #time frame
@@ -37,6 +37,25 @@ def compute_melgram(audio_path):
     ret = ret[np.newaxis, np.newaxis, :]
     # librosa.display.specshow(ret, sr=sr, hop_length=512, x_axis='time', y_axis='mel')
     return ret
+
+def processAudioFolder(argsFeed):
+    directoryPrefix = argsFeed['directoryPrefix']
+    directoryName = argsFeed['directoryName']
+    directoryPath = os.path.join(directoryPrefix, directoryName)
+    print("Processing started on Directory Path : {}".format(directoryPath))
+    start_time = time.time()
+    audioNameToMelSpec = {}
+    for i, f in enumerate(listdir(directoryPath)):
+        if i % 100 ==0:
+            print("\nFolder Name : {} | Files Processed : {}\n".format(directoryName, i))
+        melSpectogram = compute_melgram(os.path.join(directoryPath,f))
+        audioNameToMelSpec[f] = melSpectogram
+
+    print("Finished Directory Name : {} | Time taken : {} minutes".format(directoryName, float(time.time()-start_time)/3600))
+    print("Saving Numpy array for Directory Name : {}".format(os.path.join(directoryPrefix+directoryName+".npy")))
+    np.save(os.path.join(directoryPrefix+directoryName+".npy"), audioNameToMelSpec)
+    print(" ---- Finish Saved for Directory Name : {}".format(directoryName))
+    return 1
 
 if __name__=="__main__":
     audioPath = "/home/manish/CS543/MusicSimilarity/Dataset/000/000002.mp3"
