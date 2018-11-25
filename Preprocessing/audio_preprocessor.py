@@ -45,18 +45,24 @@ def processAudioFolder(argsFeed):
     print("Processing started on Directory Path : {}".format(directoryPath))
     start_time = time.time()
     audioNameToMelSpec = {}
+    failCount =0
     for i, f in enumerate(listdir(directoryPath)):
         if i % 100 ==0:
             print("\nFolder Name : {} | Files Processed : {}\n".format(directoryName, i))
-        melSpectogram = compute_melgram(os.path.join(directoryPath,f))
+        try:
+            melSpectogram = compute_melgram(os.path.join(directoryPath,f))
+        except:
+            failCount+=1
+            continue
         audioNameToMelSpec[f] = melSpectogram
 
-    print("Finished Directory Name : {} | Time taken : {} minutes".format(directoryName, float(time.time()-start_time)/3600))
+    print("Finished Directory Name : {} | Fail Count : {} | Time taken : {} minutes".format(directoryName, failCount, float(time.time()-start_time)/60))
     print("Saving Numpy array for Directory Name : {}".format(os.path.join(directoryPrefix+directoryName+".npy")))
     np.save(os.path.join(directoryPrefix+directoryName+".npy"), audioNameToMelSpec)
     print(" ---- Finish Saved for Directory Name : {}".format(directoryName))
     return 1
 
 if __name__=="__main__":
-    audioPath = "/home/manish/CS543/MusicSimilarity/Dataset/000/000002.mp3"
-    print(compute_melgram(audioPath).shape)
+    # audioPath = "/home/manish/CS543/MusicSimilarity/Dataset/000/000002.mp3"
+    print(processAudioFolder({"directoryPrefix": "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/mp3",
+                              "directoryName": "6"}))

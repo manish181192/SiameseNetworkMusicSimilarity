@@ -17,7 +17,8 @@ if __name__=="__main__":
 
     def listAllDirectories(dirPrefix):
         listArgsDict = []
-        return [ {'directoryName': dir,"directoryPrefix": dirPrefix} for dir in os.listdir(dirPrefix)]
+	
+        return [ {'directoryName': dir,"directoryPrefix": dirPrefix} for dir in os.listdir(dirPrefix) if not os.path.exists(os.path.join(dirPrefix+dir+".npy"))]
 
 
     # sampleDirectories = ["/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/mp3/sample_0",
@@ -26,11 +27,11 @@ if __name__=="__main__":
         print("Usage : python Multiprocessing.py <super_directory> <numThreads>")
 
     superDirectory = sys.argv[1]
-    numThreads = sys.argv[2]
+    numThreads = int(sys.argv[2])
 
     argsFeed = listAllDirectories(superDirectory)
 
-    multiProcessInstance = MultiProcessing(ap.processAudioFolder , 2)
+    multiProcessInstance = MultiProcessing(ap.processAudioFolder , numThreads)
     # multiProcessInstance.runProcesses(sampleDirectories)
     multiProcessInstance.runProcesses(argsFeed)
 
