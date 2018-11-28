@@ -1,10 +1,32 @@
 class ModelConfig(object):
 
     def __init__(self):
+
+
+        # Data config
+        self.trainSongListFile = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/MTAT_split/train_list_pub.cP"
+        self.trainLabelsFile = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/MTAT_split/y_train_pub.npy"
+
+        self.validSongListFile = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/MTAT_split/valid_list_pub.cP"
+        self.validLabelsFile = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/MTAT_split/y_valid_pub.npy"
+
+        self.testSongListFile = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/MTAT_split/test_list_pub.cP"
+        self.testLabelsFile = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/MTAT_split/y_test_pub.npy"
+
+        self.imagesFolder = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/iMelSpectrograms"
+
+        self.maxLabelsFile = "/home/manish/CS543/MusicSimilarity/Datasets/MagnaTagATune/MTAT_split/top50_tags.txt"
+
+
+        self.labelsList = open(self.maxLabelsFile).readlines()
+        self.maxLabels = len(self.labelsList)
+
         self.melBins = 96
         self.timeSteps = 1366
-        self.channels =1
-        self.maxLabels = 50
+        self.channels = 1
+
+        # Model config
+
         self.filterShapes = [[3,3,1,128],
                              [3,3,128,384],
                              [3,3,384,768],
