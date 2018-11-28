@@ -25,7 +25,15 @@ class ModelConfig(object):
         self.timeSteps = 1366
         self.channels = 1
 
-        # Model config
+        # Training
+        self.initLearningRate = 0.05
+        self.keepProb = 0.5
+        self.batchSize = 4
+        self.numEpochs = 2
+        self.saveModelIteration = 100
+        self.saveModel = False
+
+        # Model configuration
 
         self.filterShapes = [[3,3,1,128],
                              [3,3,128,384],

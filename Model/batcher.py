@@ -7,21 +7,22 @@ class Batcher(object):
 
         self.dataConfig = config
 
-        self.trainSongs = np.load(config.trainSongListFile)
-        self.trainLabels = np.load(config.trainLabelsFile)
+        self.trainSongs = np.load(self.dataConfig.trainSongListFile)
+        self.trainLabels = np.load(self.dataConfig.trainLabelsFile)
         self.trainSize = len(self.trainLabels)
         self.trainIds = np.arange(0, self.trainSize)
 
-        self.validSongs = np.load(config.validSongListFile)
-        self.validLabels = np.load(config.validLabelsFile)
+        self.validSongs = np.load(self.dataConfig.validSongListFile)
+        self.validLabels = np.load(self.dataConfig.validLabelsFile)
         self.validSize = len(self.validLabels)
         self.validIds = np.arange(0, self.validSize)
 
-        self.testSongs = np.load(config.testSongListFile)
-        self.testLabels = np.load(config.testLabelsFile)
+        self.testSongs = np.load(self.dataConfig.testSongListFile)
+        self.testLabels = np.load(self.dataConfig.testLabelsFile)
         self.testSize = len(self.testLabels)
 
         self.currentTrainId = 0
+        self.trainEpochsCompleted = 0
         self.currentValidId = 0
         self.currentTestId = 0
 
@@ -31,12 +32,16 @@ class Batcher(object):
         self.currentValidId = 0
         np.random.shuffle(self.trainIds)
         np.random.shuffle(self.validIds)
+        self.trainEpochsCompleted+=1
 
     def resetTestBatcher(self):
 
         self.currentTestId =0
 
     def getNextTrainBatch(self, batchSize):
+
+        if self.currentTrainId>=self.trainSize:
+            self.resetTrainBatcher()
 
         trainBatchIds = self.trainIds[self.currentTrainId: self.currentTrainId+batchSize]
         songsBatch = [ self.trainSongs[i] for i in trainBatchIds]
@@ -49,6 +54,10 @@ class Batcher(object):
         return songsMelSpectrogram, np.array(labelsBatch)
 
     def getNextValidBatch(self, batchSize):
+
+        if self.currentValidId>=self.validSize:
+            return [],[]
+
         validBatchIds = self.validIds[self.currentValidId: self.currentValidId + batchSize]
         songsBatch = [self.trainSongs[i] for i in validBatchIds]
         labelsBatch = [self.trainLabels[i] for i in validBatchIds]
@@ -60,6 +69,10 @@ class Batcher(object):
         return songsMelSpectrogram, np.array(labelsBatch)
 
     def getNextTestBatch(self, batchSize):
+
+        if self.currentTestId>=self.testSize:
+            return [], []
+
         songsBatch = [self.testSongs[i] for i in range(self.currentTestId, self.currentTestId+batchSize)]
         labelsBatch = [self.testLabels[i] for i in range(self.currentTestId, self.currentTestId+batchSize)]
 
@@ -80,6 +93,7 @@ class Batcher(object):
             if folder!="3":
                 filepath = folder+filepath
             songImage = np.load(os.path.join(self.dataConfig.imagesFolder, filepath))
+            songImage = np.expand_dims(np.squeeze(songImage), axis=-1)
             songsMelSpectrogramsList.append(songImage)
         songsMelSpectrograms = np.array(songsMelSpectrogramsList)
         return songsMelSpectrograms
