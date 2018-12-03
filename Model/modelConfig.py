@@ -26,19 +26,26 @@ class ModelConfig(object):
         self.channels = 1
 
         # Training
-        self.initLearningRate = 0.05
+        self.initLearningRate = 0.005
         self.keepProb = 0.5
         self.batchSize = 4
-        self.numEpochs = 2
-        self.saveModelIteration = 100
-        self.saveModel = False
+        self.numEpochs = 50
+        self.maxIterations = 10000
+        self.saveModelIteration = 300
+        self.saveModel = True
+        self.restoreModel = True
+        self.summary = True
+
+        self.savedModelPath= "/home/manish/CS543/MusicSimilarity/Model/SavedModels"
+        self.modelName = "cnn"
+        self.summariesPath = "/home/manish/CS543/MusicSimilarity/Model/SavedModels/Summary"
 
         # Model configuration
-
         self.filterShapes = [[3,3,1,128],
                              [3,3,128,384],
                              [3,3,384,768],
                              [1,1,768,2048]]
+
         self.convStrides =[[1,1,1,1],
                            [1,1,1,1],
                            [1,1,1,1],
@@ -49,9 +56,7 @@ class ModelConfig(object):
                                  [1, 3, 8, 1],
                                  [1, 4, 8, 1]]
 
-
         self.poolStrides = [[1, 2, 4, 1],
                             [1, 4, 5, 1],
                             [1, 3, 8, 1],
                             [1, 4, 8, 1]]
-

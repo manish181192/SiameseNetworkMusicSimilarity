@@ -10,11 +10,13 @@ class Batcher(object):
         self.trainSongs = np.load(self.dataConfig.trainSongListFile)
         self.trainLabels = np.load(self.dataConfig.trainLabelsFile)
         self.trainSize = len(self.trainLabels)
+        # self.trainSize = 40
         self.trainIds = np.arange(0, self.trainSize)
 
         self.validSongs = np.load(self.dataConfig.validSongListFile)
         self.validLabels = np.load(self.dataConfig.validLabelsFile)
         self.validSize = len(self.validLabels)
+        # self.validSize = 6
         self.validIds = np.arange(0, self.validSize)
 
         self.testSongs = np.load(self.dataConfig.testSongListFile)
@@ -29,10 +31,13 @@ class Batcher(object):
     def resetTrainBatcher(self):
 
         self.currentTrainId = 0
-        self.currentValidId = 0
         np.random.shuffle(self.trainIds)
-        np.random.shuffle(self.validIds)
         self.trainEpochsCompleted+=1
+
+    def resetValidBatcher(self):
+
+        self.currentValidId = 0
+        np.random.shuffle(self.validIds)
 
     def resetTestBatcher(self):
 
@@ -41,9 +46,9 @@ class Batcher(object):
     def getNextTrainBatch(self, batchSize):
 
         if self.currentTrainId>=self.trainSize:
-            self.resetTrainBatcher()
+            return [],[]
 
-        trainBatchIds = self.trainIds[self.currentTrainId: self.currentTrainId+batchSize]
+        trainBatchIds = self.trainIds[self.currentTrainId: min(self.currentTrainId+batchSize, self.trainSize)]
         songsBatch = [ self.trainSongs[i] for i in trainBatchIds]
         labelsBatch = [ self.trainLabels[i] for i in trainBatchIds]
 
@@ -58,7 +63,7 @@ class Batcher(object):
         if self.currentValidId>=self.validSize:
             return [],[]
 
-        validBatchIds = self.validIds[self.currentValidId: self.currentValidId + batchSize]
+        validBatchIds = self.validIds[self.currentValidId: min(self.currentValidId + batchSize, self.validSize)]
         songsBatch = [self.trainSongs[i] for i in validBatchIds]
         labelsBatch = [self.trainLabels[i] for i in validBatchIds]
 
@@ -73,8 +78,8 @@ class Batcher(object):
         if self.currentTestId>=self.testSize:
             return [], []
 
-        songsBatch = [self.testSongs[i] for i in range(self.currentTestId, self.currentTestId+batchSize)]
-        labelsBatch = [self.testLabels[i] for i in range(self.currentTestId, self.currentTestId+batchSize)]
+        songsBatch = [self.testSongs[i] for i in range(self.currentTestId, min(self.currentTestId+batchSize, self.testSize))]
+        labelsBatch = [self.testLabels[i] for i in range(self.currentTestId, min(self.currentTestId+batchSize, self.testSize))]
 
         songsMelSpectrogram = self.getMelSpectrogram(songsBatch)
 
