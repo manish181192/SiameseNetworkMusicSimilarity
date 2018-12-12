@@ -64,7 +64,7 @@ class MusicTaggerModel(object):
                 # feedDict[self.learningRate] = self.config.initLearningRate
 
                 _, trainLoss, trainLogits, iterations, trainSummary = session.run([self.trainStep, self.loss, self.logits, self.globalStep, self.summariesOp], feedDict)
-                print(self.batcher.currentTrainId)
+                # print(trainLogits)
                 # print(trainLabels)
                 # print(fc1)
                 # logger.write(str(trainLogits))
@@ -86,9 +86,9 @@ class MusicTaggerModel(object):
                                                                                               trainLoss,
                                                                                               trainPrecision,
                                                                                               trainRecall,
-                                                                                              trainF1))
+                                                                                              trainFtest1))
 
-                if self.config.saveModel and iterations % self.config.saveModelIteration == 1:
+                if self.config.saveModel and iterations % self.config.saveModelIteration == 0:
                 # if iterations ==1:
                     print("Running Validation ")
                     self.batcher.resetValidBatcher()
@@ -110,7 +110,6 @@ class MusicTaggerModel(object):
                         # feedDict[self.learningRate] = self.config.initLearningRate
 
                         validLoss, validLogits, summary = session.run([self.loss, self.logits, self.summariesOp], feedDict)
-                        print(self.batcher.currentValidId)
                         if self.config.summary ==True:
                             self.validSummaryWriter.add_summary(summary, iterations)
 
@@ -145,7 +144,6 @@ class MusicTaggerModel(object):
         print("Max Train F1: {}".format(maxTrainF1))
         # logger.close()
 
-
     def testClassifier(self):
         """
                     Train CnnClassifier
@@ -166,13 +164,12 @@ class MusicTaggerModel(object):
         saver = tf.train.Saver()
         # iterations = None
 
-        # ckpt = tf.train.get_checkpoint_state(self.config.savedModelPath)
-        ckpt = tf.train.latest_checkpoint(self.config.savedModelPath)
-        # print(ckpt.all_model_checkpoint_paths)
+        ckpt = tf.train.get_checkpoint_state(self.config.savedModelPath)
+        print(ckpt.all_model_checkpoint_paths)
         # if self.config.restoreModel and os.path.exists(self.config.savedModelPath):
 
 
-        for path in [ckpt]:
+        for path in ckpt.all_model_checkpoint_paths:
             print(" - Restoring Saved Model : {}".format(path))
             # saver.restore(session, tf.train.latest_checkpoint(self.config.savedModelPath))
             saver.restore(session, path)
@@ -190,7 +187,7 @@ class MusicTaggerModel(object):
             avgValidRecall = 0.0
             avgValidF1 = 0.0
 
-            validImages, validLabels,  = self.batcher.getNextTestBatch(self.config.batchSize)
+            validImages, validLabels = self.batcher.getNextTestBatch(self.config.batchSize)
             validLogitsList = []
             validLabelsList = []
 
@@ -205,7 +202,7 @@ class MusicTaggerModel(object):
                                                               feedDict)
                 # if self.config.summary == True:
                 #     self.validSummaryWriter.add_summary(summary, iterations)
-                print(self.batcher.currentTestId)
+
                 validLogitsList.extend(validLogits)
                 validLabelsList.extend(validLabels)
 
@@ -213,15 +210,16 @@ class MusicTaggerModel(object):
                 validRecall = self.recall(validLogits, validLabels)
                 validF1 = self.f1Score(validLogits, validLabels)
 
+                validImages, validLabels = self.batcher.getNextValidBatch(self.config.batchSize)
+
                 avgValidLoss = (avgValidLoss * (
-                            self.batcher.currentTestId - self.config.batchSize) + validLoss) / self.batcher.currentTestId
+                            self.batcher.currentValidId - self.config.batchSize) + validLoss) / self.batcher.currentValidId
                 avgValidPrec = (avgValidPrec * (
-                            self.batcher.currentTestId - self.config.batchSize) + validPrecision) / self.batcher.currentTestId
+                            self.batcher.currentValidId - self.config.batchSize) + validPrecision) / self.batcher.currentValidId
                 avgValidRecall = (avgValidRecall * (
-                            self.batcher.currentTestId - self.config.batchSize) + validRecall) / self.batcher.currentTestId
+                            self.batcher.currentValidId - self.config.batchSize) + validRecall) / self.batcher.currentValidId
                 avgValidF1 = (avgValidF1 * (
-                            self.batcher.currentTestId - self.config.batchSize) + validF1) / self.batcher.currentTestId
-                validImages, validLabels = self.batcher.getNextTestBatch(self.config.batchSize)
+                            self.batcher.currentValidId - self.config.batchSize) + validF1) / self.batcher.currentValidId
 
             avgAUC, AUC = self.aucRoc(validLogitsList, validLabelsList)
             print("TEST# Loss:{} - Prec:{} - Rec:{} - f1:{} - avgAUC:{}".format(avgValidLoss,
@@ -230,43 +228,43 @@ class MusicTaggerModel(object):
                                                                                  avgValidF1,
                                                                                  avgAUC))
 
-            np.save("testEmbedings", (validLogitsList))
 
     def initPlaceholders(self):
-        self.melSpectrogramImages = tf.placeholder(
+        self.melSpectrogramImages1 = tf.placeholder(
             shape=[None, self.config.melBins, self.config.timeSteps, self.config.channels],
             dtype=tf.float32)
+
+
+        self.melSpectrogramImages2 = tf.placeholder(
+            shape=[None, self.config.melBins, self.config.timeSteps, self.config.channels],
+            dtype=tf.float32)
+
         self.tags = tf.placeholder(shape=[None, self.config.maxLabels], dtype=tf.float32)
 
         self.keepProb = tf.placeholder(dtype=tf.float32)
         # self.learningRate = tf.placeholder(dtype=tf.float32)
 
-    def cnnClassifier(self, finalLayerSize=None):
+    def siameseNetwork(self, finalLayerSize=None):
 
+        finalLayerSize = 300
         self.initPlaceholders()
-        self.melSpectrogramEmbedding = self.getConvolutionalEmbedding(self.melSpectrogramImages,
+        self.melSpectrogramEmbedding1 = self.getConvolutionalEmbedding(self.melSpectrogramImages1,
                                                                       self.config.filterShapes,
-                                                                      self.config.poolWindowShapes)
+                                                                      self.config.poolWindowShapes,
+                                                                      finalLayerSize=300
+                                                                       )
 
-        # Flatten final result
-        self.flatMelSpectrogramEmbedding = tf.reshape(self.melSpectrogramEmbedding,
-                                                      shape=[-1, 2048])
+        with tf.variable_scope("convNetwork") as scope:
+            scope.reuse_variables()
+            self.melSpectrogramEmbedding2 = self.getConvolutionalEmbedding(self.melSpectrogramImages2,
+                                                                      self.config.filterShapes,
+                                                                      self.config.poolWindowShapes,
+                                                                           finalLayerSize=300
+                                                                           )
 
-        # Fully Connected Layers - None
-        # self.weight1 = tf.get_variable("weightFC1",
-        #                                initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=None,
-        #                                                                                 dtype=tf.float32),
-        #                                dtype=tf.float32,
-        #                                shape=[2048, 2048])
-        # self.bias1 = tf.get_variable("biasFC1",
-        #                              initializer=tf.zeros_initializer,
-        #                              dtype=tf.float32,
-        #                              shape=[2048])
-        # self.fc1 = tf.matmul(self.flatMelSpectrogramEmbedding, self.weight1) + self.bias1
+
 
         # Output layer
-        if finalLayerSize == None:
-            finalLayerSize = self.config.maxLabels
         self.weightOutput = tf.get_variable("weightOutput",
                                         initializer= tf.contrib.layers.xavier_initializer(uniform=False, seed=None,
                                                                                            dtype=tf.float32),
@@ -276,15 +274,9 @@ class MusicTaggerModel(object):
                                      initializer=tf.zeros_initializer,
                                      dtype=tf.float32,
                                      shape=[finalLayerSize])
-        # self.fcResult = tf.matmul(self.flatMelSpectrogramEmbedding, self.weight1) + self.bias1
-        self.fcResult = tf.matmul(self.flatMelSpectrogramEmbedding, self.weightOutput) + self.biasOutput
+        self.fcResult = tf.matmul((self.melSpectrogramEmbedding1 - self.melSpectrogramEmbedding2), self.weightOutput) + self.biasOutput
         # Predictions using sigmoid
         self.logits = tf.nn.sigmoid(self.fcResult)
-        # self.predictions = tf.cast(self.logits + 0.5, tf.int32)
-        #
-        # # calculate loss(logistic loss)
-        # self.loss = tf.reduce_mean(tf.negative(tf.multiply(self.tags, tf.log(self.logits + 0.000000000001)) +
-        #                                        tf.multiply((1 - self.tags), tf.log(1 - self.logits + 0.000000000001))))
         self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.fcResult, labels=self.tags))
 
     def backwardPass(self):
@@ -311,65 +303,77 @@ class MusicTaggerModel(object):
         self.validSummaryWriter = tf.summary.FileWriter(self.config.summariesPath+"/valid", session.graph)
 
 
-    def getConvolutionalEmbedding(self, inputImages, filterShapes, poolWindowShapes):
+    def getConvolutionalEmbedding(self, inputImages, filterShapes, poolWindowShapes, finalLayerSize):
         """
 
         :param inputImages: [BatchSize, mel-bins, timeFrame, Channels]
         :param filters: [ list of filter([filter_height, filter_width, in_channels, out_channels]) ]
         :return: Convolutional Embedding
         """
-        input = inputImages
-        self.results = []
-        self.means = []
-        self.variances = []
-        for filterId, filter in enumerate(filterShapes):
-            filter = tf.get_variable("filter_{}".format(filterId),
-                                     dtype=tf.float32,
-                                     shape=filterShapes[filterId],
-                                     # initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=None,
-                                     #                                                       dtype=tf.float32)
-                                     initializer=tf.contrib.layers.variance_scaling_initializer(dtype=tf.float32)
-                                     )
 
-            # bias = tf.get_variable("bias_{}",format(filterId),
-            #                        dtype=tf.float32,
-            #                        initializer=tf.zeros(shape=[]))
+        with tf.variable_scope("convNetwork") as scope:
+            input = inputImages
+            self.results = []
+            self.means = []
+            self.variances = []
+            for filterId, filter in enumerate(filterShapes):
+                filter = tf.get_variable("filter_{}".format(filterId),
+                                         dtype=tf.float32,
+                                         shape=filterShapes[filterId],
+                                         # initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=None,
+                                         #                                                       dtype=tf.float32)
+                                         initializer=tf.contrib.layers.variance_scaling_initializer(dtype=tf.float32)
+                                         )
 
-            result = tf.nn.conv2d(input,
-                                  filter,
-                                  strides=self.config.convStrides[filterId],
-                                  padding="SAME")
-            # result = tf.nn.bias_add(result, bias)
-            mean, var = tf.nn.moments(result, axes=-1, keep_dims=True)
-            self.variable_summaries(name='mean_{}'.format(filterId), var=mean)
-            self.variable_summaries(name='var_{}'.format(filterId), var = var)
+                # bias = tf.get_variable("bias_{}",format(filterId),
+                #                        dtype=tf.float32,
+                #                        initializer=tf.zeros(shape=[]))
 
-            self.means.append(mean)
-            self.variances.append(var)
+                result = tf.nn.conv2d(input,
+                                      filter,
+                                      strides=self.config.convStrides[filterId],
+                                      padding="SAME")
+                # result = tf.nn.bias_add(result, bias)
+                mean, var = tf.nn.moments(result, axes=-1, keep_dims=True)
+                self.variable_summaries(name='mean_{}'.format(filterId), var=mean)
+                self.variable_summaries(name='var_{}'.format(filterId), var = var)
 
-            normalizedResult = tf.nn.batch_normalization(result,
-                                                         mean=mean,
-                                                         variance=var,
-                                                         offset=0,
-                                                         scale=0.99,
-                                                         variance_epsilon=0.00001)
+                self.means.append(mean)
+                self.variances.append(var)
 
-            tf.summary.histogram('convBNPre-Activations_{}'.format(filterId), normalizedResult)
+                normalizedResult = tf.nn.batch_normalization(result,
+                                                             mean=mean,
+                                                             variance=var,
+                                                             offset=0,
+                                                             scale=0.99,
+                                                             variance_epsilon=0.00001)
 
-            resultMaxPooled = tf.nn.max_pool(normalizedResult,
-                                             ksize=poolWindowShapes[filterId],
-                                             strides=self.config.poolStrides[filterId],
-                                             padding="VALID")
+                tf.summary.histogram('convBNPre-Activations_{}'.format(filterId), normalizedResult)
 
-            resultActivated = tf.nn.relu(resultMaxPooled)
-            tf.summary.histogram('Activations_{}'.format(filterId), resultActivated)
+                resultMaxPooled = tf.nn.max_pool(normalizedResult,
+                                                 ksize=poolWindowShapes[filterId],
+                                                 strides=self.config.poolStrides[filterId],
+                                                 padding="VALID")
 
-            input = tf.nn.dropout(resultActivated, keep_prob=self.keepProb)
-            self.results.append(resultActivated)
+                resultActivated = tf.nn.relu(resultMaxPooled)
+                tf.summary.histogram('Activations_{}'.format(filterId), resultActivated)
 
+                input = tf.nn.dropout(resultActivated, keep_prob=self.keepProb)
+                self.results.append(resultActivated)
+            self.convOut = self.results[-1]
 
-        return self.results[-1]
+            flatMelSpectrogramEmbedding = tf.reshape(self.convOut,
+                                                          shape=[-1, 2048])
 
+            # FCN
+            w = tf.get_variable("fcn_weight", shape=[2048, finalLayerSize], initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=None,
+                                                                                           dtype=tf.float32))
+            b = tf.get_variable("fcn_bias", shape=[finalLayerSize], initializer=tf.zeros_initializer)
+
+            fcResult = tf.matmul(flatMelSpectrogramEmbedding,
+                                      w) + b
+
+            return fcResult
     # def getAccuracy(self, predictions, labels):
     #     predictions += 0.5
     #     predictions[predictions < 1] = 0
@@ -388,13 +392,10 @@ class MusicTaggerModel(object):
             tf.summary.histogram('histogram', var)
 
     def precision(self, predictions, labels):
-        try:
-            if np.sum(predictions)==0: return 0
-            predictions += 0.5
-            predictions[predictions < 1] = 0
-            return float(np.sum(np.logical_and(predictions, labels))) / np.sum(predictions)
-        except:
-            return 0.0
+        if np.sum(predictions)==0: return 0
+        predictions += 0.5
+        predictions[predictions < 1] = 0
+        return float(np.sum(np.logical_and(predictions, labels))) / np.sum(predictions)
 
     def recall(self, predictions, labels):
         predictions += 0.5

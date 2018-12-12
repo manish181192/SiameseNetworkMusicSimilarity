@@ -36,7 +36,7 @@ class ModelConfig(object):
         self.restoreModel = True
         self.summary = True
 
-        self.savedModelPath= "/home/manish/CS543/MusicSimilarity/Model/SavedModels"
+        self.savedModelPath= "/home/manish/CS543/MusicSimilarity/Model/SavedModels_7500"
         self.modelName = "cnn"
         self.summariesPath = "/home/manish/CS543/MusicSimilarity/Model/SavedModels/Summary"
 
